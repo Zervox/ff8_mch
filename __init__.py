@@ -132,11 +132,17 @@ class MchVertex_class:
         -y#2bytes
         -z#2bytes
         -2 unknown bytes"""
-    def __init__(self,x,y,z) :#constructor
+    def __init__(self,x=0,y=0,z=0) :#constructor
         self.x=x
         self.y=y
         self.z=z
     #Comparison operators
+    def setXYZ(self, x=0,y=0,z=0):
+        self.x=x
+        self.y=y
+        self.z=z
+        return self
+	
     def __eq__(self, other):#"=="
         if isinstance(other,MchVertex_class):
             return (self.x == other.x)and(self.y == other.y)and(self.z == other.z)#compare all dictionary
@@ -168,7 +174,7 @@ class MchUV_class:
     """Class defining a MCH vertex(8bytes):
         -x#1byte
         -y#1byte"""
-    def __init__(self,u,v) :#constructor
+    def __init__(self,u=0,v=0) :#constructor
         self.u=u
         self.v=v
     #Comparison operators
@@ -214,7 +220,7 @@ class MchFace_class:
         -texgroup# 2bytes
         -12 unused bytes"""
     def __init__(self) :#constructor
-        self.is_tri=0
+        self.is_tri=False
         self.v1=0
         self.v2=0
         self.v3=0
@@ -478,13 +484,12 @@ def createMeshFromData(name, verts, faces, uvs):
 
     # Create mesh from given verts, faces.
     BVert=[[v.x,v.y,v.z] for v in verts]
-    BFace=[]
+    BFace=[None] * len(faces)
     for i in range(len(faces)):
-        if ( faces[i].is_tri==0x25010607):
-            face=[faces[i].v1,faces[i].v2,faces[i].v3]
-        else :
-            face=[faces[i].v1,faces[i].v2,faces[i].v3,faces[i].v4]
-        BFace.append(face)
+        if faces[i].is_tri is True:
+            BFace[i] = [faces[i].v1, faces[i].v2, faces[i].v3]
+        else:
+            BFace[i] = [faces[i].v1, faces[i].v2, faces[i].v3, faces[i].v4]
 
     me.from_pydata(BVert, [], BFace)
 
@@ -498,11 +503,11 @@ def createMeshFromData(name, verts, faces, uvs):
     uv_layer = bm.loops.layers.uv[0]
     for i in range(len(bm.faces)):
         f=bm.faces[i]
-        if(len(f.loops)==3):
+        if(faces[i].is_tri is True):
             f.loops[0][uv_layer].uv=(uvs[faces[i].vt1].u/128,uvs[faces[i].vt1].v/128)
             f.loops[1][uv_layer].uv=(uvs[faces[i].vt2].u/128,uvs[faces[i].vt2].v/128)
             f.loops[2][uv_layer].uv=(uvs[faces[i].vt3].u/128,uvs[faces[i].vt3].v/128)
-        elif(len(f.loops)==4):
+        else:
             f.loops[0][uv_layer].uv=(uvs[faces[i].vt1].u/128,uvs[faces[i].vt1].v/128)
             f.loops[1][uv_layer].uv=(uvs[faces[i].vt2].u/128,uvs[faces[i].vt2].v/128)
             f.loops[2][uv_layer].uv=(uvs[faces[i].vt3].u/128,uvs[faces[i].vt3].v/128)
@@ -592,10 +597,10 @@ def ClearScene():
 def ReadBone(inputfile):
     header=ReadMCH(inputfile)
     inputfile.seek(header.ModelAddress+header.BoneOffset,0)
-    boneList=[]
+    boneList=[MchBone_class() for i in range(header.BoneCount)]
     print("bone Count from header:{}".format(header.BoneCount))
     for i in range(0,header.BoneCount):
-        bone=MchBone_class()
+        bone=boneList[i]
         #get parent ( 2bytes)
         bone.parent=int.from_bytes(inputfile.read(2), byteorder='little')-1#base 1 in mch
         #skip 6 bytes
@@ -606,7 +611,6 @@ def ReadBone(inputfile):
             bone.length-=0x10000
         #skip 54 bytes
         inputfile.seek(54,1)
-        boneList.append(bone)
 
     #calculate nb of children
     for i in range(0,header.BoneCount):
@@ -644,10 +648,10 @@ def RestPose(mchfile,boneList,char_name):
 
     anim.offset=(x,y,z)
     #rotations
-    poseList=[]
+    poseList=[MchPose_class() for i in range(header.BoneCount)]
     mchfile.seek(header.ModelAddress+header.AnimOffset+2+10,0)
     for i in range(0,header.BoneCount):
-        pose=MchPose_class()
+        pose=poseList[i]
 
         pose.rotX=int.from_bytes(mchfile.read(2), byteorder='little')
         pose.rotY=int.from_bytes(mchfile.read(2), byteorder='little')
@@ -659,10 +663,6 @@ def RestPose(mchfile,boneList,char_name):
             pose.rotY-=0x10000
         if(pose.rotZ>=0xf000):
             pose.rotZ-=0x10000'''#This is wrong.On 2 bytes range is [-(0x10000-0x8000) , 0x8000]
-
-
-
-        poseList.append(pose)
 
     #bone name
     hairCount=0
@@ -812,12 +812,12 @@ def RestPose(mchfile,boneList,char_name):
                 boneList[i].name=BoneNames[j]
 
 
-
     for i in range(0,header.BoneCount):
         Vec=Vector((0,0,1))
-        rotX=poseList[i].rotX
-        rotY=poseList[i].rotY
-        rotZ=poseList[i].rotZ
+        posebone=poseList[i]
+        rotX=posebone.rotX
+        rotY=posebone.rotY
+        rotZ=posebone.rotZ
 
 
         if(rotX>=0x8000):
@@ -833,12 +833,13 @@ def RestPose(mchfile,boneList,char_name):
         rotZ=math.pi*(rotZ)/0x800
 
         eul=Euler((rotX,rotY,rotZ),'YXZ')
+        actualbone=boneList[i]
         if (i==0):
-            boneList[i].head=Vector((0,0,0))
-            boneList[i].length=Vector((anim.offset[1],anim.offset[0],anim.offset[2])).length
+            actualbone.head=Vector((0,0,0))
+            actualbone.length=Vector((anim.offset[1],anim.offset[0],anim.offset[2])).length
 
         else:
-            boneList[i].head=boneList[boneList[i].parent].tail
+            actualbone.head=boneList[actualbone.parent].tail
             if(i==1):
                eul.rotate_axis('Y',math.radians(-85))
             if(i==2):
@@ -847,48 +848,48 @@ def RestPose(mchfile,boneList,char_name):
                 else:
                     eul.rotate_axis('Y',math.radians(90))
 
-            if(boneList[i].name=="neck"):
+            if(actualbone.name=="neck"):
                eul.rotate_axis('Y',math.radians(180))
 
-            if(boneList[i].name=="head"):
+            elif(actualbone.name=="head"):
                eul.rotate_axis('Y',math.radians(170))
 
 
-            if(boneList[i].name=="hair0"):
+            elif(actualbone.name=="hair0"):
                eul.rotate_axis('Y',math.radians(150))
 
-            if(boneList[i].name=="hair1"):
+            elif(actualbone.name=="hair1"):
                eul[1]=0
 
-            if(boneList[i].name=="hair2"):
+            elif(actualbone.name=="hair2"):
                 eul[1]=0
 
-            if(boneList[i].name=="hair3"):
+            elif(actualbone.name=="hair3"):
                eul.rotate_axis('Y',math.radians(-45))
 
 
-            if(boneList[i].name=="collar0"):
+            elif(actualbone.name=="collar0"):
                 eul[0]=0
                 eul.rotate_axis('Z',math.radians(-30))
                 eul.rotate_axis('Y',math.radians(-90))
-            if(boneList[i].name=="collar2"):
+            elif(actualbone.name=="collar2"):
                 eul[0]=0
                 eul.rotate_axis('Z',math.radians(30))
                 eul.rotate_axis('Y',math.radians(-90))
 
-            if(boneList[i].name=="collar1"):
+            elif(actualbone.name=="collar1"):
                 eul[0]=0
                 eul.rotate_axis('X',math.radians(90))
                 eul.rotate_axis('Y',math.radians(30))
 
-            if(boneList[i].name=="collar3"):
+            elif(actualbone.name=="collar3"):
                 eul[0]=0
                 eul.rotate_axis('X',math.radians(-90))
                 eul.rotate_axis('Y',math.radians(30))
 
 
 
-            if(boneList[i].name=="cape0"):
+            elif(actualbone.name=="cape0"):
 
                 eul[0]=0
                 eul[1]=0
@@ -896,7 +897,7 @@ def RestPose(mchfile,boneList,char_name):
                 eul.rotate_axis('Y',math.radians(-20))
 
 
-            if(boneList[i].name=="cape1"):
+            elif(actualbone.name=="cape1"):
                 eul[0]=0
                 eul[1]=0
                 eul[2]=0
@@ -905,55 +906,55 @@ def RestPose(mchfile,boneList,char_name):
 
             #if(boneList[i].name=="cape2"):
                 #eul[0]=0
-            if(boneList[i].name=="cape3"):
+            elif(actualbone.name=="cape3"):
                 eul[0]=0
-            if(boneList[i].name=="cape4"):
+            elif(actualbone.name=="cape4"):
                 eul[0]=0
                 eul[1]=0
                 eul[2]=0
             #if(boneList[i].name=="cape5"):
                 #eul[0]=0
 
-            if(boneList[i].name=="belt0"):
+            elif(actualbone.name=="belt0"):
                 eul.rotate_axis('Y',math.radians(100))
                 eul.rotate_axis('X',math.radians(-10))
-            if(boneList[i].name=="belt1"):
+            elif(actualbone.name=="belt1"):
                 eul.rotate_axis('Y',math.radians(100))
                 eul.rotate_axis('X',math.radians(10))
 
-            if(boneList[i].name=="belt2"):
+            elif(actualbone.name=="belt2"):
                 eul.rotate_axis('Z',math.radians(30))
                 eul.rotate_axis('Y',math.radians(120))
 
-            if(boneList[i].name=="belt4"):
+            elif(actualbone.name=="belt4"):
                 eul.rotate_axis('Z',math.radians(-30))
                 eul.rotate_axis('Y',math.radians(120))
 
 
-            if(boneList[i].name=="belt3"):
+            elif(actualbone.name=="belt3"):
                 eul.rotate_axis('Y',math.radians(90))
                 eul.rotate_axis('Z',math.radians(-45))
-            if(boneList[i].name=="belt5"):
+            elif(actualbone.name=="belt5"):
                 eul.rotate_axis('Y',math.radians(90))
                 eul.rotate_axis('Z',math.radians(45))
 
 
 
-            if(boneList[i].name=="dress2"):
+            elif(actualbone.name=="dress2"):
                 eul[2]=0
                 #eul.rotate_axis('Y',math.radians(-90))
-            if(boneList[i].name=="dress5"):
+            elif(actualbone.name=="dress5"):
                 eul[2]=0
                 #eul.rotate_axis('Y',math.radians(-90))
 
-            if(boneList[i].name=="dress1"):
+            elif(actualbone.name=="dress1"):
                 eul.rotate_axis('Y',math.radians(90))
                 eul.rotate_axis('Z',math.radians(90))
-            if(boneList[i].name=="dress4"):
+            elif(actualbone.name=="dress4"):
                 eul.rotate_axis('Y',math.radians(90))
                 eul.rotate_axis('Z',math.radians(90))
 
-            if(boneList[i].name=="dress0"):
+            elif(actualbone.name=="dress0"):
                 #eul.rotate_axis('Z',math.radians(40))
                 #eul.rotate_axis('X',math.radians(90))
                 #eul.rotate_axis('Y',math.radians(0))
@@ -961,7 +962,7 @@ def RestPose(mchfile,boneList,char_name):
                 eul[1]=0
                 eul[0]=0
 
-            if(boneList[i].name=="dress3"):
+            elif(actualbone.name=="dress3"):
                 #eul.rotate_axis('Z',math.radians(-40))
                 #eul.rotate_axis('X',math.radians(-90))
                 #eul.rotate_axis('Y',math.radians(0))
@@ -971,39 +972,39 @@ def RestPose(mchfile,boneList,char_name):
 
 
 
-            if(boneList[i].name=="breast_R"):
+            elif(actualbone.name=="breast_R"):
 
                 eul.rotate_axis('Y',math.radians(45))
                 eul.rotate_axis('X',math.radians(-10))
-            if(boneList[i].name=="breast_L"):
+            elif(actualbone.name=="breast_L"):
                eul.rotate_axis('Y',math.radians(45))
                eul.rotate_axis('X',math.radians(10))
                eul.rotate_axis('Z',math.radians(180))
 
-            if(boneList[i].name=="shoulder_R"):
+            elif(actualbone.name=="shoulder_R"):
               eul.rotate_axis('Y',math.radians(45))
               eul.rotate_axis('Z',math.radians(70))
               eul.rotate_axis('X',math.radians(15))
 
 
-            if(boneList[i].name=="shoulder_L"):
+            elif(actualbone.name=="shoulder_L"):
                eul.rotate_axis('Y',math.radians(45))
                eul.rotate_axis('Z',math.radians(-70))
                eul.rotate_axis('X',math.radians(-15))
 
-            if(boneList[i].name=="hip_R"):
+            elif(actualbone.name=="hip_R"):
                eul[1]=0
                eul[2]=0
                eul.rotate_axis('Y',math.radians(-20))
-            if(boneList[i].name=="hip_L"):
+            elif(actualbone.name=="hip_L"):
                 eul[1]=0
                 eul[2]=0
                 eul.rotate_axis('Y',math.radians(-20))
-            if(boneList[i].name=="thigh_R"):
+            elif(actualbone.name=="thigh_R"):
                 eul[0]=0
                 eul[1]=0
                 eul[2]=0
-            if(boneList[i].name=="thigh_L"):
+            elif(actualbone.name=="thigh_L"):
                 eul[0]=0
                 eul[1]=0
                 eul[2]=0
@@ -1012,7 +1013,7 @@ def RestPose(mchfile,boneList,char_name):
 
         Vec.rotate(eul)
 
-        boneList[i].tail=Vec*boneList[i].length/256+boneList[i].head
+        actualbone.tail=Vec*actualbone.length/256+actualbone.head
 
         BoneRotations.append(eul)
 
@@ -1497,50 +1498,31 @@ def MCH_TO_BLEND(context,directory=""):
 
 
     #Store vertices
-    #get character scale from chara.one
-    SCALE=0x100
-    if one_found==1:
-        onepath=''.join([directory,curr_one_name,".one"])
-        onefile=open(onepath,"rb")
-        onetxt=onefile.read()
-        pos=onetxt.find(bytes(char_name, 'utf-8'))#character header position in chara.one
-        if pos==-1:
-            print("the chara.one doesn't contain {}\n".format(char_name))
-        else:
-            onefile.seek(pos-7,0)#go back 7 bytes to read the character scale
-            SCALE=int.from_bytes(onefile.read(2), byteorder='little')
-            print("character scale is {}\n".format(SCALE))
-        onefile.close()
-        
-        
     inputfile.seek(header.ModelAddress+header.VOffset)
-    Vlist=[]
+    Vlist=[MchVertex_class() for i in range(header.VCount)]
     for i in range(header.VCount):
-        x=int.from_bytes(inputfile.read(2), byteorder='little')
-        if(x>0x8000):#negative
-            x-=0x10000
-        y=int.from_bytes(inputfile.read(2), byteorder='little')
-        if(y>0x8000):#negative
-            y-=0x10000
-        z=int.from_bytes(inputfile.read(2), byteorder='little')
-        if(z>0x8000):#negative
-            z-=0x10000
+        x=int.from_bytes(inputfile.read(2), byteorder='little', signed=True)
+        y=int.from_bytes(inputfile.read(2), byteorder='little', signed=True)
+        z=int.from_bytes(inputfile.read(2), byteorder='little', signed=True)		
+
         #skip 2 unknown bytes from actual position
         inputfile.seek(2,1)
         #store the vertex as a 3 float list
-        Vlist.append(MchVertex_class(x/SCALE,y/SCALE,z/SCALE))
-       
+        Vlist[i].setXYZ(x/32768*2,y/32768*2,z/32768*2)
+        ##print("X{} Y{} Z{}".format(Vlist[i].x,Vlist[i].y,Vlist[i].z))
 
 
     #Store faces and UVs
     inputfile.seek(header.ModelAddress+header.FOffset)
-    Flist=[]
-    UVlist=[]
+    Flist=[MchFace_class() for i in range(header.FCount)]
+    UVList = [MchUV_class() for i in range(header.FCount*4)]
     for i in range(header.FCount):
         inputfile.seek(header.ModelAddress+header.FOffset+i*64,0)
-        fa=MchFace_class()
-        Flist.append(fa)
-        fa.is_tri=int.from_bytes(inputfile.read(4), byteorder='little')
+		#0907012d means it is a quad
+        fa=Flist[i]
+        fa.is_tri=(int.from_bytes(inputfile.read(4), byteorder='little') == 0x25010607)
+        if(fa.is_tri is False):
+            print("Is Quad{}\n".format(Flist[i].is_tri))
         inputfile.seek(8,1)
         fa.v2=int.from_bytes(inputfile.read(2), byteorder='little')
         fa.v1=int.from_bytes(inputfile.read(2), byteorder='little')
@@ -1549,13 +1531,12 @@ def MCH_TO_BLEND(context,directory=""):
         inputfile.seek(24,1)
 
         for j in range(4):#same order as face vertices(v2,v3,v1,v4)
-            u=int.from_bytes(inputfile.read(1), byteorder='little')
-            v=int.from_bytes(inputfile.read(1), byteorder='little')
-
-            #invert V coordinate
-            v=128-v
-
-            UVlist.append(MchUV_class(u,v))
+            uv=UVList[4*i+j]
+            uv.u = int.from_bytes(inputfile.read(1), byteorder='little')  # First part of UV
+            uv.v = int.from_bytes(inputfile.read(1), byteorder='little')  # Second part of U
+			
+			#invert V coordinate
+            uv.v=128-uv.v
 
 
         #skip 2 unknown bytes from actual position
@@ -1566,40 +1547,42 @@ def MCH_TO_BLEND(context,directory=""):
         tgroup=[0,0]
         tgroup[0]=math.floor(fa.texgroup/2)
         tgroup[1]=fa.texgroup%2
-        for j in range(4):
-            UVlist[4*i+j].v+=tgroup[1]*128
-            UVlist[4*i+j].u+=tgroup[0]*128
+        for j in range(4):	
+            UVList[4*i+j].u+=tgroup[0]*128
+            UVList[4*i+j].v+=tgroup[1]*128
 
 
 
 
     #associate uvs to faces
     ##remove redundant uvs
-    print("UV count before filter:",len(UVlist))
-    UVlist_redundant=UVlist.copy()
+    print("UV count before filter:",len(UVList))
+    UVList_redundant=UVList.copy()
 
 
-    for uv in UVlist:
-        if(UVlist.count(uv)>1):
-            UVlist.remove(uv)
-    print("UV count after filter:",len(UVlist))
+    for uv in UVList:
+        if(UVList.count(uv)>1):
+            UVList.remove(uv)
+    print("UV count after filter:",len(UVList))
 
 
 
     ##associate uvs index
     for i in range(header.FCount):
-        for j in range(len(UVlist)):
-            if (UVlist[j]==UVlist_redundant[4*i]):
-                Flist[i].vt2=j
-            if (UVlist[j]==UVlist_redundant[4*i+1]):
-                Flist[i].vt1=j
-            if (UVlist[j]==UVlist_redundant[4*i+2]):
-                Flist[i].vt3=j
-            if (UVlist[j]==UVlist_redundant[4*i+3]):
-                Flist[i].vt4=j
+        fa = Flist[i]
+        for j in range(len(UVList)):
+            uv=UVList[j]
+            if (uv==UVList_redundant[4*i]):
+                fa.vt2=j
+            if (uv==UVList_redundant[4*i+1]):
+                fa.vt1=j
+            if (uv==UVList_redundant[4*i+2]):
+                fa.vt3=j
+            if (uv==UVList_redundant[4*i+3]):
+                fa.vt4=j
     #Draw the raw model in blender
 
-    createMeshFromData("{}".format(header.char_name),Vlist,Flist,UVlist)
+    createMeshFromData("{}".format(header.char_name),Vlist,Flist,UVList)
 
 
     #-----Associate material-------
@@ -1700,12 +1683,10 @@ def MCH_TO_BLEND(context,directory=""):
 
 
     #create raw armature( for charaone )
-    rawbonelist=[]
+    rawbonelist=[MchBone_class() for i in range(header.BoneCount)]
     for i in range(0,header.BoneCount):
-        bone=MchBone_class()
-
         bone=boneList[i]
-        rawbonelist.append(bone)
+        rawbonelist[i]=bone
 
     #------adjust upperbody and lower body rotation relative to root
     for i in range(0,header.BoneCount):
@@ -1778,9 +1759,9 @@ def MCH_TO_BLEND(context,directory=""):
     bpy.context.view_layer.objects.active=char_ob
     char_ob.select_set(state = True)
     inputfile.seek(header.ModelAddress+header.ObOffset)
-    skinGroups=[]
+    skinGroups=[MchSkin_class() for i in range(header.ObCount)]
     for i in range(0,header.ObCount):
-        skin=MchSkin_class()
+        skin=skinGroups[i]
         #fist vertex base 0
         skin.vertexFirst=int.from_bytes(inputfile.read(2), byteorder='little')
         skin.vertexCount=int.from_bytes(inputfile.read(2), byteorder='little')
@@ -1791,7 +1772,6 @@ def MCH_TO_BLEND(context,directory=""):
 
         skin.name=boneList[skin.bone].name
 
-        skinGroups.append(skin)
         print(" skin {}".format(skin.name))
         grp=char_ob.vertex_groups.new()
         grp.name=skin.name
@@ -1821,8 +1801,8 @@ def MCH_TO_BLEND(context,directory=""):
 
 
             if(i>=min)and(i<=max):
-                Vec.rotate(rot_eul)
-                Vec+=head
+               Vec.rotate(rot_eul)
+               Vec+=head
 
 
     # Give mesh object an armature modifier, using vertex groups but
