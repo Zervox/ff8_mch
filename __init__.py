@@ -21,6 +21,7 @@ import os,bpy.path,bpy.ops,bmesh,math
 from os.path import basename,dirname
 from mathutils import Vector, Matrix,Euler
 from bpy.props import StringProperty, BoolProperty
+from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
 
 bl_info = {
@@ -39,6 +40,7 @@ MAX_SIZE=0x1000
 MAX_TEXSIZE=0x80#0x80 by default.DO NOT CHANGE THIS.
 MAX_ANGLE=0x800#180deg
 UPSCALE=1#0x100 for upscale
+endian='little'
 
 #MCH_TO_BLEND
 def Empty_dir(directory):
@@ -369,82 +371,82 @@ def ReadMCH(inputfile):
     out=0
     #Skip the texture maps
     while (byteArray!=None) and (out!=1):
-        byteArray=int.from_bytes(inputfile.read(4), byteorder='little')
+        byteArray=int.from_bytes(inputfile.read(4), byteorder=endian)
         if byteArray==0xffffffff:
             out=1
 
     #get address of header(after all the texture maps)
-    header.ModelAddress=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.ModelAddress=int.from_bytes(inputfile.read(4), byteorder=endian)
     #get bone count
     inputfile.seek(header.ModelAddress)
-    header.BoneCount=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.BoneCount=int.from_bytes(inputfile.read(4), byteorder=endian)
     #get vertices count
     inputfile.seek(header.ModelAddress+0x04)
-    header.VCount=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.VCount=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get texture animation count
     inputfile.seek(header.ModelAddress+0x08)
-    header.TexAnimSize=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.TexAnimSize=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get face count
     inputfile.seek(header.ModelAddress+0x0c)
-    header.FCount=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.FCount=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get unk1 count
     inputfile.seek(header.ModelAddress+0x10)
-    header.Unk1Count=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.Unk1Count=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get skin object count
     inputfile.seek(header.ModelAddress+0x14)
-    header.ObCount=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.ObCount=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get unk2 count
     inputfile.seek(header.ModelAddress+0x18)
-    header.Unk2Count=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.Unk2Count=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get tri count
     inputfile.seek(header.ModelAddress+0x1c)
-    header.TriCount=int.from_bytes(inputfile.read(2), byteorder='little')
+    header.TriCount=int.from_bytes(inputfile.read(2), byteorder=endian)
 
     #get quad count
     inputfile.seek(header.ModelAddress+0x1e)
-    header.QuadCount=int.from_bytes(inputfile.read(2), byteorder='little')
+    header.QuadCount=int.from_bytes(inputfile.read(2), byteorder=endian)
 
     #get bone offset
     inputfile.seek(header.ModelAddress+0x20)
-    header.BoneOffset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.BoneOffset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get vertices offset
     inputfile.seek(header.ModelAddress+0x24)
-    header.VOffset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.VOffset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get tex anim offset
     inputfile.seek(header.ModelAddress+0x28)
-    header.TexAnimOffset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.TexAnimOffset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get face offset
     inputfile.seek(header.ModelAddress+0x2c)
-    header.FOffset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.FOffset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get unk1 offset
     inputfile.seek(header.ModelAddress+0x30)
-    header.Unk1Offset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.Unk1Offset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get skin objects offset
     inputfile.seek(header.ModelAddress+0x34)
-    header.ObOffset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.ObOffset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get anim offset
     inputfile.seek(header.ModelAddress+0x38)
-    header.AnimOffset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.AnimOffset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get unk2 offset
     inputfile.seek(header.ModelAddress+0x3c)
-    header.Unk2Offset=int.from_bytes(inputfile.read(4), byteorder='little')
+    header.Unk2Offset=int.from_bytes(inputfile.read(4), byteorder=endian)
 
     #get anim count
     inputfile.seek(header.AnimOffset)
-    header.AnimCount=int.from_bytes(inputfile.read(2), byteorder='little')  #Error, was 4 bytes
+    header.AnimCount=int.from_bytes(inputfile.read(2), byteorder=endian)  #Error, was 4 bytes
 
     return header
 
@@ -602,11 +604,11 @@ def ReadBone(inputfile):
     for i in range(0,header.BoneCount):
         bone=boneList[i]
         #get parent ( 2bytes)
-        bone.parent=int.from_bytes(inputfile.read(2), byteorder='little')-1#base 1 in mch
+        bone.parent=int.from_bytes(inputfile.read(2), byteorder=endian)-1#base 1 in mch
         #skip 6 bytes
         inputfile.seek(6,1)
         #get length ( 2bytes).All bone length are negative
-        bone.length=int.from_bytes(inputfile.read(2), byteorder='little')
+        bone.length=int.from_bytes(inputfile.read(2), byteorder=endian)
         if(bone.length>0x8000):
             bone.length-=0x10000
         #skip 54 bytes
@@ -632,17 +634,17 @@ def RestPose(mchfile,boneList,char_name):
     mchfile.seek(header.ModelAddress+header.AnimOffset+2,0)
     anim=MchAnim_class()
     #frame count
-    anim.frameCount=int.from_bytes(mchfile.read(2), byteorder='little')
+    anim.frameCount=int.from_bytes(mchfile.read(2), byteorder=endian)
     #bone count
-    anim.boneCount=int.from_bytes(mchfile.read(2), byteorder='little')
+    anim.boneCount=int.from_bytes(mchfile.read(2), byteorder=endian)
     #offset
-    y=int.from_bytes(mchfile.read(2), byteorder='little')
+    y=int.from_bytes(mchfile.read(2), byteorder=endian)
     if(y>0x8000):
         y-=0x10000
-    x=int.from_bytes(mchfile.read(2), byteorder='little')
+    x=int.from_bytes(mchfile.read(2), byteorder=endian)
     if(x>0x8000):
         x-=0x10000
-    z=int.from_bytes(mchfile.read(2), byteorder='little')
+    z=int.from_bytes(mchfile.read(2), byteorder=endian)
     if(z>0x8000):
         z-=0x10000
 
@@ -653,9 +655,9 @@ def RestPose(mchfile,boneList,char_name):
     for i in range(0,header.BoneCount):
         pose=poseList[i]
 
-        pose.rotX=int.from_bytes(mchfile.read(2), byteorder='little')
-        pose.rotY=int.from_bytes(mchfile.read(2), byteorder='little')
-        pose.rotZ=int.from_bytes(mchfile.read(2), byteorder='little')
+        pose.rotX=int.from_bytes(mchfile.read(2), byteorder=endian)
+        pose.rotY=int.from_bytes(mchfile.read(2), byteorder=endian)
+        pose.rotZ=int.from_bytes(mchfile.read(2), byteorder=endian)
         #negative?
         '''if(pose.rotX>=0xf000):
             pose.rotX-=0x10000
@@ -1208,18 +1210,18 @@ def ReadAnim(boneList,onefile,char_name):
     """Returns a list of animations. An animation is a list of frames. A frame is a pose list of a bone list."""
     print("Extracting anim of {} from chara.one".format(char_name))
     onefile.seek(0,0)
-    charCount=int.from_bytes(onefile.read(4), byteorder='little')
+    charCount=int.from_bytes(onefile.read(4), byteorder=endian)
     print("{} characters".format(charCount))
     alone=MchAlone_class()
     for i in range(0,charCount):
 
-        alone.Address=int.from_bytes(onefile.read(4), byteorder='little')+4#offset just after the character count so we add 4 for the absolute offset
-        alone.Size=int.from_bytes(onefile.read(4), byteorder='little')
+        alone.Address=int.from_bytes(onefile.read(4), byteorder=endian)+4#offset just after the character count so we add 4 for the absolute offset
+        alone.Size=int.from_bytes(onefile.read(4), byteorder=endian)
         onefile.seek(4,1)
-        alone.hasTim=int.from_bytes(onefile.read(4), byteorder='little')
+        alone.hasTim=int.from_bytes(onefile.read(4), byteorder=endian)
         if alone.hasTim<=0xd0000000:  #if has<=0xd0000000 then it's a NPC with textures
-            alone.TimOffset=int.from_bytes(onefile.read(4), byteorder='little')
-        alone.ModelOffset=int.from_bytes(onefile.read(4), byteorder='little')
+            alone.TimOffset=int.from_bytes(onefile.read(4), byteorder=endian)
+        alone.ModelOffset=int.from_bytes(onefile.read(4), byteorder=endian)
         alone.name=onefile.read(4).decode(encoding="cp437")
         onefile.seek(8,1)
         if(alone.name==char_name):
@@ -1234,7 +1236,7 @@ def ReadAnim(boneList,onefile,char_name):
         #Read char animation
         onefile.seek(alone.Address,0)
         #anim count
-        alone.AnimCount=int.from_bytes(onefile.read(2),byteorder='little')
+        alone.AnimCount=int.from_bytes(onefile.read(2),byteorder=endian)
         print("AnimCount:{}".format(alone.AnimCount))
 
         bpy.context.view_layer.objects.active = armature_raw
@@ -1244,14 +1246,14 @@ def ReadAnim(boneList,onefile,char_name):
 
             anim=MchAnim_class()
             anim.name=char_name+"_act{}".format(i)
-            anim.frameCount=int.from_bytes(onefile.read(2),byteorder='little')
-            anim.boneCount=int.from_bytes(onefile.read(2),byteorder='little')
+            anim.frameCount=int.from_bytes(onefile.read(2),byteorder=endian)
+            anim.boneCount=int.from_bytes(onefile.read(2),byteorder=endian)
             print ("frameCount:{} boneCount:{}".format(anim.frameCount,anim.boneCount))
             for j in range(0,anim.frameCount):
                 frame=MchFrame_class()
-                offy=int.from_bytes(onefile.read(2),byteorder='little')
-                offx=int.from_bytes(onefile.read(2),byteorder='little')
-                offz=int.from_bytes(onefile.read(2),byteorder='little')
+                offy=int.from_bytes(onefile.read(2),byteorder=endian)
+                offx=int.from_bytes(onefile.read(2),byteorder=endian)
+                offz=int.from_bytes(onefile.read(2),byteorder=endian)
 
 
                 if(offx>0x8000):
@@ -1268,10 +1270,10 @@ def ReadAnim(boneList,onefile,char_name):
                     pose=MchPose_class()
 
                     #Vehek 2 qhimm
-                    byte_1=int.from_bytes(onefile.read(1),byteorder='little')
-                    byte_2=int.from_bytes(onefile.read(1),byteorder='little')
-                    byte_3=int.from_bytes(onefile.read(1),byteorder='little')
-                    byte_4=int.from_bytes(onefile.read(1),byteorder='little')
+                    byte_1=int.from_bytes(onefile.read(1),byteorder=endian)
+                    byte_2=int.from_bytes(onefile.read(1),byteorder=endian)
+                    byte_3=int.from_bytes(onefile.read(1),byteorder=endian)
+                    byte_4=int.from_bytes(onefile.read(1),byteorder=endian)
 
                     pose.rotZ=((byte_1)|((byte_4&3)<<8))<<2
                     pose.rotX=((byte_2)|((byte_4&0xc)<<6))<<2
@@ -1335,7 +1337,7 @@ def TIM_TO_BLEND(inputfile,name):
     0x02 for 16-bits true color(no palette)
     0x03 for 24-bits true color(no palette)*/"""
     while texoffset!=0xFFFFFF:
-        texoffset=int.from_bytes(inputfile.read(3), byteorder='little')
+        texoffset=int.from_bytes(inputfile.read(3), byteorder=endian)
         inputfile.seek(1,1)#skip 1 byte
         if texoffset!=0xFFFFFF:
             texcount+=1
@@ -1349,20 +1351,20 @@ def TIM_TO_BLEND(inputfile,name):
         tex_image=bpy.data.images.new("{}-{}".format(name,i),128,128)#original texture is 128x128
         colordepth=0
         inputfile.seek(i*4,0)
-        texoffset=int.from_bytes(inputfile.read(3), byteorder='little')
+        texoffset=int.from_bytes(inputfile.read(3), byteorder=endian)
         inputfile.seek(texoffset+4,0)#skip0x10000000
-        colordepth=int.from_bytes(inputfile.read(4), byteorder='little')
+        colordepth=int.from_bytes(inputfile.read(4), byteorder=endian)
 
 
         #-------PALETTE IF 4-bit or 8-bit image----------
         if(colordepth==0x08) or (colordepth==0x09):
             #Color is 2bytes and stores ABGR data
             #Colorbits=ABBBBBGGGGGRRRRR
-            palette.imagesize=int.from_bytes(inputfile.read(4), byteorder='little')
-            palette.x=int.from_bytes(inputfile.read(2), byteorder='little')
-            palette.y=int.from_bytes(inputfile.read(2), byteorder='little')
-            palette.pixH=int.from_bytes(inputfile.read(2), byteorder='little')
-            palette.pixV=int.from_bytes(inputfile.read(2), byteorder='little')
+            palette.imagesize=int.from_bytes(inputfile.read(4), byteorder=endian)
+            palette.x=int.from_bytes(inputfile.read(2), byteorder=endian)
+            palette.y=int.from_bytes(inputfile.read(2), byteorder=endian)
+            palette.pixH=int.from_bytes(inputfile.read(2), byteorder=endian)
+            palette.pixV=int.from_bytes(inputfile.read(2), byteorder=endian)
 
             #Convert 1 line of 256 pix into 16 pix x 16 pix image
             palette_image=bpy.data.images.new("palette{}".format(i),16,16)
@@ -1373,7 +1375,7 @@ def TIM_TO_BLEND(inputfile,name):
                 G=0
                 R=0
                 pix_image=0
-                pix_image=int.from_bytes(inputfile.read(2), byteorder='little')
+                pix_image=int.from_bytes(inputfile.read(2), byteorder=endian)
                 A=(pix_image&0b1000000000000000)>>0x0F
                 B=(pix_image&0b0111110000000000)>>0x0A
                 G=(pix_image&0b0000001111100000)>>0x05
@@ -1392,11 +1394,11 @@ def TIM_TO_BLEND(inputfile,name):
                 palette_image.pixels[pix*4+3]=A
 
         #-------IMAGE----------
-        image.imagesize=int.from_bytes(inputfile.read(4), byteorder='little')
-        image.x=int.from_bytes(inputfile.read(2), byteorder='little')
-        image.y=int.from_bytes(inputfile.read(2), byteorder='little')
-        image.pixH=int.from_bytes(inputfile.read(2), byteorder='little')
-        image.pixV=int.from_bytes(inputfile.read(2), byteorder='little')
+        image.imagesize=int.from_bytes(inputfile.read(4), byteorder=endian)
+        image.x=int.from_bytes(inputfile.read(2), byteorder=endian)
+        image.y=int.from_bytes(inputfile.read(2), byteorder=endian)
+        image.pixH=int.from_bytes(inputfile.read(2), byteorder=endian)
+        image.pixV=int.from_bytes(inputfile.read(2), byteorder=endian)
 
         pix_size=0#changes if texture is 4-bit or 8-bit
 
@@ -1414,7 +1416,7 @@ def TIM_TO_BLEND(inputfile,name):
 
         for pix in range(0,image.pixH*image.pixV*pix_size*2):
             color=0
-            color=int.from_bytes(inputfile.read(pix_size), byteorder='little')
+            color=int.from_bytes(inputfile.read(pix_size), byteorder=endian)
             R=palette_image.pixels[color*4]
             G=palette_image.pixels[color*4+1]
             B=palette_image.pixels[color*4+2]
@@ -1435,80 +1437,115 @@ def TIM_TO_BLEND(inputfile,name):
         tex_image.use_fake_user= True
 
     return texcount
+'''
+def MCH_TO_BLEND(context, filepath=""):
+    # Get the directory from the filepath
+    directory = os.path.dirname(filepath)  # You just need the directory part
+    # Get the base filename
+    mchfilename = os.path.basename(filepath)
+    # Split it into the filename and the extension
+    mchfilenamewithoutextension, _ = os.path.splitext(mchfilename)
+    # Create the onefilename variable correctly
+    onefilename = mchfilenamewithoutextension + ".one"
+    onefilepath1 = os.path.join(directory, onefilename)
 
-def MCH_TO_BLEND(context,directory=""):
-    #----OLD CODE ---05/10/2024-----
-    #--------------------------------
-    #cur_dir=bpy.path.abspath("//")
-    #indir_name=''.join([cur_dir,"INPUT\\"])
-    #outdir_name=''.join([cur_dir,"OUTPUT\\"])
-    #mch_found=0
-    #one_found=0
-    #char_name='none'
-    #filelist=[entity for entity in os.listdir(indir_name)]#create list
-    #for entity in filelist:
-        #(filename, extension) = os.path.splitext(entity)
-        #if extension==".mch":
-            #mch_found=1
-            #char_name=filename[0:4]
-            #print("Character {} open\n".format(char_name))
-        #elif extension==".one":
-            #one_found=1
-            #curr_one_name=filename
-            #print("{} found\n".format(entity))
-    #if mch_found==0:
-        #print("NO MCH found! Please put it in INPUT folder\n")
-        #return
-    #if one_found==0:
-        #print("NO chara.ONE found! No animation will be created\n")
+    # Initialize SCALE to a fallback value
+    SCALE = (32768 / 2)
+    
+    if os.path.exists(onefilepath1):
+        # Use the scale from the same-named .one file
+        onefilepath = onefilepath1
+    else:
+        # Try to find another .one file in the directory
+        onefilepath = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.one') and f != onefilename]
+        if onefilepath:
+            onefilepath = onefilepath[0]
+        else:
+            onefilepath = None
+    
+    if onefilepath:
+        with open(onefilepath, "rb") as onefile:
+            onetxt = onefile.read()
+            pos = onetxt.find(bytes(mchfilenamewithoutextension, 'utf-8'))  # character header position in chara.one
+            if pos == -1:
+                print("the chara.one doesn't contain {}\n".format(mchfilenamewithoutextension))
+            else:
+                onefile.seek(pos - 7, 0)  # go back 7 bytes to read the character scale
+                SCALE = int.from_bytes(onefile.read(2), byteorder=endian)  # Read the scale from the .one file
+                print("character scale is {}\n".format(SCALE))
 
-    #inputpath=''.join([indir_name,char_name,".mch"])
-
-
-    mch_found=0
-    one_found=0
-    char_name='none'
-    filelist=[entity for entity in os.listdir(directory)]#create list
-    for entity in filelist:
-        (filename, extension) = os.path.splitext(entity)
-        if extension==".mch":
-            mch_found=1
-            char_name=filename[0:4]
-        elif extension==".one":
-            one_found=1
-            curr_one_name=filename
-            print("{} found\n".format(entity))
-    if mch_found==0:
-        print("NO MCH found! Please put it in INPUT folder\n")
-        return
-    if one_found==0:
-        print("NO chara.ONE found! No animation will be created\n")
-
-
-    filepath=''.join([directory,char_name,".mch"])
-
-    inputfile=open(filepath,"rb")
-    char_name=basename(filepath).split('.mch')[0]
-    print("model name:{}\n".format(char_name))
-    curr_model_name=char_name
-    header=MchHeader_class()
-    header=ReadMCH(inputfile)
-    header.char_name=char_name
+    inputfile = open(filepath, "rb")  # Concatenate proper paths
+    char_name = mchfilenamewithoutextension
+    print("model name: {}\n".format(char_name))
+    curr_model_name = char_name
+    header = MchHeader_class()
+    header = ReadMCH(inputfile)
+    header.char_name = char_name
     print("{}\n".format(header))
 
+    # Output the character scale
+    print("character scale from {} is {}\n".format(onefilename if onefilepath else "fallback", SCALE))
+'''
+def MCH_TO_BLEND(context, filepath=""):
+    # Get the directory from the filepath
+    directory = os.path.dirname(filepath)  # You just need the directory part
+    # Get the base filename
+    mchfilename = os.path.basename(filepath)
+    # Split it into the filename and the extension
+    mchfilenamewithoutextension, _ = os.path.splitext(mchfilename)
+    # Create the onefilename variable correctly
+    onefilename = mchfilenamewithoutextension + ".one"
+    onefilepath1 = os.path.join(directory, onefilename)
+
+    # Initialize SCALE to a fallback value
+    SCALE = (32768 / 2)
+    
+    if os.path.exists(onefilepath1):
+        # Use the scale from the same-named .one file
+        onefilepath = onefilepath1
+    else:
+        # Try to find another .one file in the directory
+        onefilepath = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.one') and f != onefilename]
+        if onefilepath:
+            onefilepath = onefilepath[0]
+        else:
+            onefilepath = None
+    
+    if onefilepath:
+        with open(onefilepath, "rb") as onefile:
+            onetxt = onefile.read()
+            pos = onetxt.find(bytes(mchfilenamewithoutextension, 'utf-8'))  # character header position in chara.one
+            if pos == -1:
+                print("the chara.one doesn't contain {}\n".format(mchfilenamewithoutextension))
+            else:
+                onefile.seek(pos - 7, 0)  # go back 7 bytes to read the character scale
+                SCALE = int.from_bytes(onefile.read(2), byteorder=endian)  # Read the scale from the .one file
+                print("character scale is {}\n".format(SCALE))
+
+    inputfile = open(filepath, "rb")  # Concatenate proper paths
+    char_name = mchfilenamewithoutextension
+    print("model name: {}\n".format(char_name))
+    curr_model_name = char_name
+    header = MchHeader_class()
+    header = ReadMCH(inputfile)
+    header.char_name = char_name
+    print("{}\n".format(header))
+
+    # Output the character scale
+    print("character scale from {} is {}\n".format(onefilename if onefilepath else "fallback", SCALE))
 
     #Store vertices
     inputfile.seek(header.ModelAddress+header.VOffset)
     Vlist=[MchVertex_class() for i in range(header.VCount)]
     for i in range(header.VCount):
-        x=int.from_bytes(inputfile.read(2), byteorder='little', signed=True)
-        y=int.from_bytes(inputfile.read(2), byteorder='little', signed=True)
-        z=int.from_bytes(inputfile.read(2), byteorder='little', signed=True)		
+        x=int.from_bytes(inputfile.read(2), byteorder=endian, signed=True)
+        y=int.from_bytes(inputfile.read(2), byteorder=endian, signed=True)
+        z=int.from_bytes(inputfile.read(2), byteorder=endian, signed=True)		
 
         #skip 2 unknown bytes from actual position
         inputfile.seek(2,1)
         #store the vertex as a 3 float list
-        Vlist[i].setXYZ(x/32768*2,y/32768*2,z/32768*2)
+        Vlist[i].setXYZ(x/SCALE,y/SCALE,z/SCALE)
         ##print("X{} Y{} Z{}".format(Vlist[i].x,Vlist[i].y,Vlist[i].z))
 
 
@@ -1520,20 +1557,20 @@ def MCH_TO_BLEND(context,directory=""):
         inputfile.seek(header.ModelAddress+header.FOffset+i*64,0)
 		#0907012d means it is a quad
         fa=Flist[i]
-        fa.is_tri=(int.from_bytes(inputfile.read(4), byteorder='little') == 0x25010607)
+        fa.is_tri=(int.from_bytes(inputfile.read(4), byteorder=endian) == 0x25010607)
         if(fa.is_tri is False):
             print("Is Quad{}\n".format(Flist[i].is_tri))
         inputfile.seek(8,1)
-        fa.v2=int.from_bytes(inputfile.read(2), byteorder='little')
-        fa.v1=int.from_bytes(inputfile.read(2), byteorder='little')
-        fa.v3=int.from_bytes(inputfile.read(2), byteorder='little')
-        fa.v4=int.from_bytes(inputfile.read(2), byteorder='little')
+        fa.v2=int.from_bytes(inputfile.read(2), byteorder=endian)
+        fa.v1=int.from_bytes(inputfile.read(2), byteorder=endian)
+        fa.v3=int.from_bytes(inputfile.read(2), byteorder=endian)
+        fa.v4=int.from_bytes(inputfile.read(2), byteorder=endian)
         inputfile.seek(24,1)
 
         for j in range(4):#same order as face vertices(v2,v3,v1,v4)
             uv=UVList[4*i+j]
-            uv.u = int.from_bytes(inputfile.read(1), byteorder='little')  # First part of UV
-            uv.v = int.from_bytes(inputfile.read(1), byteorder='little')  # Second part of U
+            uv.u = int.from_bytes(inputfile.read(1), byteorder=endian)  # First part of UV
+            uv.v = int.from_bytes(inputfile.read(1), byteorder=endian)  # Second part of U
 			
 			#invert V coordinate
             uv.v=128-uv.v
@@ -1541,7 +1578,7 @@ def MCH_TO_BLEND(context,directory=""):
 
         #skip 2 unknown bytes from actual position
         inputfile.seek(2,1)
-        fa.texgroup=int.from_bytes(inputfile.read(2), byteorder='little')
+        fa.texgroup=int.from_bytes(inputfile.read(2), byteorder=endian)
         #offset uvs by texture group
 
         tgroup=[0,0]
@@ -1748,9 +1785,8 @@ def MCH_TO_BLEND(context,directory=""):
             #print("{}\n".format(onepath))
             #break
     #onefile=open(onepath,"rb")
-    if one_found==1:
-        filepath=''.join([directory,curr_one_name,".one"])
-        onefile=open(filepath,"rb")
+    if onefilepath:
+        onefile=open(onefilepath,"rb")
         ReadAnim(boneList,onefile,char_name)
 
 
@@ -1763,10 +1799,10 @@ def MCH_TO_BLEND(context,directory=""):
     for i in range(0,header.ObCount):
         skin=skinGroups[i]
         #fist vertex base 0
-        skin.vertexFirst=int.from_bytes(inputfile.read(2), byteorder='little')
-        skin.vertexCount=int.from_bytes(inputfile.read(2), byteorder='little')
+        skin.vertexFirst=int.from_bytes(inputfile.read(2), byteorder=endian)
+        skin.vertexCount=int.from_bytes(inputfile.read(2), byteorder=endian)
         #bone base 1
-        skin.bone=int.from_bytes(inputfile.read(2), byteorder='little')-1
+        skin.bone=int.from_bytes(inputfile.read(2), byteorder=endian)-1
         #skip 2 bytes
         inputfile.seek(2,1)
 
@@ -1940,61 +1976,64 @@ def BLEND_TO_MCH(context,directory=""):
 
 
     print("{}".format(newheader))
+#reading from Zero
 
 
 
+
+#reading for ints
 
     #---COPY BONE COUNT---
     inputfile.seek(header.ModelAddress,0)
     outputfile.write(inputfile.read(4))
 
     #---WRITE NEW VERTEXCOUNT---
-    outputfile.write(newheader.VCount.to_bytes(4,'little'))
+    outputfile.write(newheader.VCount.to_bytes(4,endian))
 
     #---WRITE TEX ANIM SIZE---
-    outputfile.write(newheader.TexAnimSize.to_bytes(4,'little'))
+    outputfile.write(newheader.TexAnimSize.to_bytes(4,endian))
 
     #---WRITE NEW FACECOUNT---
-    outputfile.write(newheader.FCount.to_bytes(4,'little'))
+    outputfile.write(newheader.FCount.to_bytes(4,endian))
 
     #---WRITE UNKNOWN1COUNT---
-    outputfile.write(newheader.Unk1Count.to_bytes(4,'little'))
+    outputfile.write(newheader.Unk1Count.to_bytes(4,endian))
 
     #---WRITE SKINOBCOUNT---
-    outputfile.write(newheader.ObCount.to_bytes(4,'little'))
+    outputfile.write(newheader.ObCount.to_bytes(4,endian))
 
     #---WRITE UNKNOWN2COUNT---
-    outputfile.write(newheader.Unk2Count.to_bytes(4,'little'))
+    outputfile.write(newheader.Unk2Count.to_bytes(4,endian))
 
     #---WRITE NEW TRI COUNT---
-    outputfile.write(newheader.TriCount.to_bytes(2,'little'))
+    outputfile.write(newheader.TriCount.to_bytes(2,endian))
 
     #---WRITE NEW QUAD COUNT---
-    outputfile.write(newheader.QuadCount.to_bytes(2,'little'))
+    outputfile.write(newheader.QuadCount.to_bytes(2,endian))
 
     #---WRITE NEW BONE OFFSET---
-    outputfile.write(newheader.BoneOffset.to_bytes(4,'little'))
+    outputfile.write(newheader.BoneOffset.to_bytes(4,endian))
 
     #---WRITE NEW VERTICES OFFSET---
-    outputfile.write(newheader.VOffset.to_bytes(4,'little'))
+    outputfile.write(newheader.VOffset.to_bytes(4,endian))
 
     #---WRITE NEW TEXANIM OFFSET---
-    outputfile.write(newheader.TexAnimOffset.to_bytes(4,'little'))
+    outputfile.write(newheader.TexAnimOffset.to_bytes(4,endian))
 
     #---WRITE NEW FACES OFFSET---
-    outputfile.write(newheader.FOffset.to_bytes(4,'little'))
+    outputfile.write(newheader.FOffset.to_bytes(4,endian))
 
     #---WRITE UNK1 OFFSET---
-    outputfile.write(newheader.Unk1Offset.to_bytes(4,'little'))
+    outputfile.write(newheader.Unk1Offset.to_bytes(4,endian))
 
     #---WRITE SKINOB OFFSET---
-    outputfile.write(newheader.ObOffset.to_bytes(4,'little'))
+    outputfile.write(newheader.ObOffset.to_bytes(4,endian))
 
     #---WRITE ANIM OFFSET---
-    outputfile.write(newheader.AnimOffset.to_bytes(4,'little'))
+    outputfile.write(newheader.AnimOffset.to_bytes(4,endian))
 
     #---WRITE UNK2 OFFSET---
-    outputfile.write(newheader.Unk2Offset.to_bytes(4,'little'))
+    outputfile.write(newheader.Unk2Offset.to_bytes(4,endian))
 
 
 
@@ -2012,13 +2051,13 @@ def BLEND_TO_MCH(context,directory=""):
 
     for bone in bonelist:
         if bone.name!='root':
-            outputfile.write( (bone.parent+1).to_bytes(2,'little'))
-            outputfile.write( ((bone.parent+1)*0x40).to_bytes(2,'little'))#bone parent ID * 0x40. Why?
+            outputfile.write( (bone.parent+1).to_bytes(2,endian))
+            outputfile.write( ((bone.parent+1)*0x40).to_bytes(2,endian))#bone parent ID * 0x40. Why?
             outputfile.write(b'\x00' * 4)#skip 4 bytes
             l=math.floor(bone.length*UPSCALE)
             if l<0:
                 l+=0x10000
-            outputfile.write(l.to_bytes(2,'little'))
+            outputfile.write(l.to_bytes(2,endian))
         else:
             outputfile.write(b'\x00' * 10)#skip 10 bytes
         outputfile.write(b'\x00' * 54)#skip 54 bytes
@@ -2091,9 +2130,9 @@ def BLEND_TO_MCH(context,directory=""):
             if nvert[2]<0:
                 nvert[2]+=0x10000
 
-            outputfile.write(int(nvert[0]).to_bytes(2,'little'))
-            outputfile.write(int(nvert[1]).to_bytes(2,'little'))
-            outputfile.write(int(nvert[2]).to_bytes(2,'little'))
+            outputfile.write(int(nvert[0]).to_bytes(2,endian))
+            outputfile.write(int(nvert[1]).to_bytes(2,endian))
+            outputfile.write(int(nvert[2]).to_bytes(2,endian))
             outputfile.write(b'\x00' * 2)#skip 2 zero bytes
             Vorder_total+=1
 
@@ -2150,24 +2189,24 @@ def BLEND_TO_MCH(context,directory=""):
         #---vertices
         if len(face.vertices)<4:#triangle
             istri=0x25010607
-            outputfile.write(istri.to_bytes(4,'little'))
+            outputfile.write(istri.to_bytes(4,endian))
             faceunk=0x0000000100000044
-            outputfile.write(faceunk.to_bytes(8,'little'))#Always 4400000001000000
+            outputfile.write(faceunk.to_bytes(8,endian))#Always 4400000001000000
 
-            outputfile.write(Vinvert[face.vertices[1]].to_bytes(2,'little'))
-            outputfile.write(Vinvert[face.vertices[0]].to_bytes(2,'little'))
-            outputfile.write(Vinvert[face.vertices[2]].to_bytes(2,'little'))
+            outputfile.write(Vinvert[face.vertices[1]].to_bytes(2,endian))
+            outputfile.write(Vinvert[face.vertices[0]].to_bytes(2,endian))
+            outputfile.write(Vinvert[face.vertices[2]].to_bytes(2,endian))
             outputfile.write(b'\x00' * 2)#skip 2 bytes
 
         else:#quad
             istri=0x2d010709
-            outputfile.write(istri.to_bytes(4,'little'))
+            outputfile.write(istri.to_bytes(4,endian))
             faceunk=0x0000000100000044
-            outputfile.write(faceunk.to_bytes(8,'little'))#Always 4400000001000000
-            outputfile.write(Vinvert[face.vertices[1]].to_bytes(2,'little'))
-            outputfile.write(Vinvert[face.vertices[0]].to_bytes(2,'little'))
-            outputfile.write(Vinvert[face.vertices[2]].to_bytes(2,'little'))
-            outputfile.write(Vinvert[face.vertices[3]].to_bytes(2,'little'))
+            outputfile.write(faceunk.to_bytes(8,endian))#Always 4400000001000000
+            outputfile.write(Vinvert[face.vertices[1]].to_bytes(2,endian))
+            outputfile.write(Vinvert[face.vertices[0]].to_bytes(2,endian))
+            outputfile.write(Vinvert[face.vertices[2]].to_bytes(2,endian))
+            outputfile.write(Vinvert[face.vertices[3]].to_bytes(2,endian))
         #--normals??
         normalV=[0,0,0]
 
@@ -2181,15 +2220,15 @@ def BLEND_TO_MCH(context,directory=""):
         if normalV[2]<0:
             normalV[2]+=0x10000
 
-        outputfile.write(int(normalV[0]).to_bytes(2,'little'))
-        outputfile.write(int(normalV[1]).to_bytes(2,'little'))#normal are in opposite order than the verts !
-        outputfile.write(int(normalV[2]).to_bytes(2,'little'))
-        outputfile.write(int(normalV[0]).to_bytes(2,'little'))
+        outputfile.write(int(normalV[0]).to_bytes(2,endian))
+        outputfile.write(int(normalV[1]).to_bytes(2,endian))#normal are in opposite order than the verts !
+        outputfile.write(int(normalV[2]).to_bytes(2,endian))
+        outputfile.write(int(normalV[0]).to_bytes(2,endian))
 
         #--vertex colors in A R G B format
         for k in range(4):
             vcol=0x00999999
-            outputfile.write(vcol.to_bytes(4,'little'))
+            outputfile.write(vcol.to_bytes(4,endian))
 
         #--UVs
 
@@ -2213,25 +2252,25 @@ def BLEND_TO_MCH(context,directory=""):
             #UVcoords[loopnum][1]=math.floor(UVcoords[loopnum][1]/2)
 
 
-        outputfile.write(int(UVcoords[1][0]).to_bytes(1,'little'))
-        outputfile.write(int(UVcoords[1][1]).to_bytes(1,'little'))
-        outputfile.write(int(UVcoords[0][0]).to_bytes(1,'little'))
-        outputfile.write(int(UVcoords[0][1]).to_bytes(1,'little'))
-        outputfile.write(int(UVcoords[2][0]).to_bytes(1,'little'))
-        outputfile.write(int(UVcoords[2][1]).to_bytes(1,'little'))
+        outputfile.write(int(UVcoords[1][0]).to_bytes(1,endian))
+        outputfile.write(int(UVcoords[1][1]).to_bytes(1,endian))
+        outputfile.write(int(UVcoords[0][0]).to_bytes(1,endian))
+        outputfile.write(int(UVcoords[0][1]).to_bytes(1,endian))
+        outputfile.write(int(UVcoords[2][0]).to_bytes(1,endian))
+        outputfile.write(int(UVcoords[2][1]).to_bytes(1,endian))
 
         if len(face.vertices)<4:#triangle
             outputfile.write(b'\x00' * 2)#skip 2 bytes
         else:#square
-            outputfile.write(int(UVcoords[3][0]).to_bytes(1,'little'))
-            outputfile.write(int(UVcoords[3][1]).to_bytes(1,'little'))
+            outputfile.write(int(UVcoords[3][0]).to_bytes(1,endian))
+            outputfile.write(int(UVcoords[3][1]).to_bytes(1,endian))
 
 
         outputfile.write(b'\x00' * 2)#skip 2 bytes
 
 
         #--texture group of 128pix *128pix.
-        outputfile.write((2*texgroup[0]+texgroup[1]).to_bytes(2,'little'))
+        outputfile.write((2*texgroup[0]+texgroup[1]).to_bytes(2,endian))
         outputfile.write(b'\x00' * 8)#skip 8 bytes
         countface+=1
     
@@ -2245,17 +2284,17 @@ def BLEND_TO_MCH(context,directory=""):
         #---first skin object/ vertex group--Always zero
         outputfile.write(b'\x00' * 2)
         #--vertex group count
-        outputfile.write(newheader.ObCount.to_bytes(2,'little'))
+        outputfile.write(newheader.ObCount.to_bytes(2,endian))
         #--twelve zeroes
         outputfile.write(b'\x00' * 12)
         #--first tri--Always zero
         outputfile.write(b'\x00' * 2)
         #--tri count
-        outputfile.write(newheader.TriCount.to_bytes(2,'little'))
+        outputfile.write(newheader.TriCount.to_bytes(2,endian))
         #--first quad--Always zero
         outputfile.write(b'\x00' * 2)
         #--quad count
-        outputfile.write(newheader.QuadCount.to_bytes(2,'little'))
+        outputfile.write(newheader.QuadCount.to_bytes(2,endian))
         #--8 zeroes
         outputfile.write(b'\x00' * 8)
 
@@ -2270,13 +2309,13 @@ def BLEND_TO_MCH(context,directory=""):
     outputfile.seek(newheader.ModelAddress +newheader.ObOffset,0)
   
     for vgroup in char_ob.vertex_groups:
-        outputfile.write((Vinvert[Vorder[vgroup.index][0]]).to_bytes(2,'little'))#1stvertex
-        outputfile.write(len(Vorder[vgroup.index]).to_bytes(2,'little'))#vertex count
+        outputfile.write((Vinvert[Vorder[vgroup.index][0]]).to_bytes(2,endian))#1stvertex
+        outputfile.write(len(Vorder[vgroup.index]).to_bytes(2,endian))#vertex count
         boneID=-1
         for i in range(len(bonelist)):
             if( (bonelist[i].name==vgroup.name) and (boneID==-1)):
                 boneID=i
-        outputfile.write((boneID+1).to_bytes(2,'little'))#bone ID in base 1 for MCH
+        outputfile.write((boneID+1).to_bytes(2,endian))#bone ID in base 1 for MCH
         outputfile.write(b'\x00' * 2)#skip 2 bytes
         print("vgroup {} vertex count {}\n".format(vgroup.name,len(Vorder[vgroup.index])))
 
@@ -2313,21 +2352,21 @@ from bpy_extras.io_utils import ImportHelper, ExportHelper
 """**********************************************
 FF8 operators definitions for the user interface
 ************************************************"""
-class MchToBlend_op(bpy.types.Operator):
+class MchToBlend_op(bpy.types.Operator, ImportHelper):
     '''Import from FF8 (.mch)'''
     bl_idname = "ff8tools.mch2blend"#No capitals in bl_idname!!"
     bl_label = "INPUT folder for MCH and CHARA.ONE"
     bl_option ={'REGISTER'}
-
-    directory: StringProperty(
-        name="Outdir Path",
-        description="Where I will save my stuff")
 
     filter_folder: BoolProperty(
         default=True,
         options={"HIDDEN"}
         )
 
+    filter_glob: StringProperty(
+        default="*.mch",
+		options={"HIDDEN"},
+        )
     def invoke(self, context, event):
         # Open browser, take reference to 'self' read the path to selected
         # file, put path in predetermined self fields.
@@ -2337,7 +2376,8 @@ class MchToBlend_op(bpy.types.Operator):
 
     def execute(self, context):
         ClearScene()
-        MCH_TO_BLEND(context, self.directory)
+        filename, extension = os.path.splitext(self.filepath)
+        MCH_TO_BLEND(context, self.filepath)
         return {'FINISHED'}
 
 
