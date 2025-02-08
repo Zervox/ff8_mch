@@ -1249,12 +1249,12 @@ def ReadAnim(boneList,onefile,char_name):
             anim.frameCount=int.from_bytes(onefile.read(2),byteorder=endian)
             anim.boneCount=int.from_bytes(onefile.read(2),byteorder=endian)
             print ("frameCount:{} boneCount:{}".format(anim.frameCount,anim.boneCount))
+            anim.frameList=[MchFrame_class() for i in range(anim.frameCount)]
             for j in range(0,anim.frameCount):
-                frame=MchFrame_class()
                 offy=int.from_bytes(onefile.read(2),byteorder=endian)
                 offx=int.from_bytes(onefile.read(2),byteorder=endian)
                 offz=int.from_bytes(onefile.read(2),byteorder=endian)
-
+                frame=anim.frameList[j]
 
                 if(offx>0x8000):
                     offx-=0x10000
@@ -1265,11 +1265,10 @@ def ReadAnim(boneList,onefile,char_name):
 
 
                 frame.Offset=Vector((offx/256,offy/256,offz/256))
+                frame.poseList=[MchPose_class() for i in range(anim.boneCount)]
                 for k in range(0,anim.boneCount):
-
-                    pose=MchPose_class()
-
                     #Vehek 2 qhimm
+                    pose=frame.poseList[k]
                     byte_1=int.from_bytes(onefile.read(1),byteorder=endian)
                     byte_2=int.from_bytes(onefile.read(1),byteorder=endian)
                     byte_3=int.from_bytes(onefile.read(1),byteorder=endian)
@@ -1288,9 +1287,6 @@ def ReadAnim(boneList,onefile,char_name):
                         pose.rotY-=0x1000
                     if (pose.rotZ>=0x800):
                         pose.rotZ-=0x1000
-
-                    frame.poseList.append(pose)
-                anim.frameList.append(frame)
 
 
 
@@ -1437,7 +1433,7 @@ def TIM_TO_BLEND(inputfile,name):
         tex_image.use_fake_user= True
 
     return texcount
-'''
+
 def MCH_TO_BLEND(context, filepath=""):
     # Get the directory from the filepath
     directory = os.path.dirname(filepath)  # You just need the directory part
@@ -1473,55 +1469,7 @@ def MCH_TO_BLEND(context, filepath=""):
                 onefile.seek(pos - 7, 0)  # go back 7 bytes to read the character scale
                 SCALE = int.from_bytes(onefile.read(2), byteorder=endian)  # Read the scale from the .one file
                 print("character scale is {}\n".format(SCALE))
-
-    inputfile = open(filepath, "rb")  # Concatenate proper paths
-    char_name = mchfilenamewithoutextension
-    print("model name: {}\n".format(char_name))
-    curr_model_name = char_name
-    header = MchHeader_class()
-    header = ReadMCH(inputfile)
-    header.char_name = char_name
-    print("{}\n".format(header))
-
-    # Output the character scale
-    print("character scale from {} is {}\n".format(onefilename if onefilepath else "fallback", SCALE))
-'''
-def MCH_TO_BLEND(context, filepath=""):
-    # Get the directory from the filepath
-    directory = os.path.dirname(filepath)  # You just need the directory part
-    # Get the base filename
-    mchfilename = os.path.basename(filepath)
-    # Split it into the filename and the extension
-    mchfilenamewithoutextension, _ = os.path.splitext(mchfilename)
-    # Create the onefilename variable correctly
-    onefilename = mchfilenamewithoutextension + ".one"
-    onefilepath1 = os.path.join(directory, onefilename)
-
-    # Initialize SCALE to a fallback value
-    SCALE = (32768 / 2)
     
-    if os.path.exists(onefilepath1):
-        # Use the scale from the same-named .one file
-        onefilepath = onefilepath1
-    else:
-        # Try to find another .one file in the directory
-        onefilepath = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.one') and f != onefilename]
-        if onefilepath:
-            onefilepath = onefilepath[0]
-        else:
-            onefilepath = None
-    
-    if onefilepath:
-        with open(onefilepath, "rb") as onefile:
-            onetxt = onefile.read()
-            pos = onetxt.find(bytes(mchfilenamewithoutextension, 'utf-8'))  # character header position in chara.one
-            if pos == -1:
-                print("the chara.one doesn't contain {}\n".format(mchfilenamewithoutextension))
-            else:
-                onefile.seek(pos - 7, 0)  # go back 7 bytes to read the character scale
-                SCALE = int.from_bytes(onefile.read(2), byteorder=endian)  # Read the scale from the .one file
-                print("character scale is {}\n".format(SCALE))
-
     inputfile = open(filepath, "rb")  # Concatenate proper paths
     char_name = mchfilenamewithoutextension
     print("model name: {}\n".format(char_name))
