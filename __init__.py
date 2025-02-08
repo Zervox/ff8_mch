@@ -1467,7 +1467,7 @@ def MCH_TO_BLEND(context, filepath=""):
                 print("the chara.one doesn't contain {}\n".format(mchfilenamewithoutextension))
             else:
                 onefile.seek(pos - 7, 0)  # go back 7 bytes to read the character scale
-                SCALE = int.from_bytes(onefile.read(2), byteorder=endian)  # Read the scale from the .one file
+                SCALE = int.from_bytes(onefile.read(2), byteorder=endian)*4  # Read the scale from the .one file
                 print("character scale is {}\n".format(SCALE))
     
     inputfile = open(filepath, "rb")  # Concatenate proper paths
