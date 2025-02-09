@@ -23,6 +23,9 @@ from mathutils import Vector, Matrix,Euler
 from bpy.props import StringProperty, BoolProperty
 from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
+import time
+import math
+import bpy
 
 bl_info = {
     "name": "FF8 MCH Field Models",
@@ -134,76 +137,97 @@ class MchVertex_class:
         -y#2bytes
         -z#2bytes
         -2 unknown bytes"""
-    def __init__(self,x=0,y=0,z=0) :#constructor
-        self.x=x
-        self.y=y
-        self.z=z
-    #Comparison operators
-    def setXYZ(self, x=0,y=0,z=0):
-        self.x=x
-        self.y=y
-        self.z=z
+    def __init__(self, x=0, y=0, z=0):
+        self.x = x
+        self.y = y
+        self.z = z
+
+    # Comparison operators
+    def setXYZ(self, x=0, y=0, z=0):
+        self.x = x
+        self.y = y
+        self.z = z
         return self
-	
-    def __eq__(self, other):#"=="
-        if isinstance(other,MchVertex_class):
-            return (self.x == other.x)and(self.y == other.y)and(self.z == other.z)#compare all dictionary
+
+    def __eq__(self, other):  # "=="
+        if isinstance(other, MchVertex_class):
+            return (self.x == other.x) and (self.y == other.y) and (self.z == other.z)
         return NotImplemented
-    def __ne__(self, other):#"!="
+
+    def __ne__(self, other):  # "!="
         result = self.__eq__(other)
         if result is NotImplemented:
             return result
         return not result
+
     def __le__(self, other):
-        if isinstance(other,MchVertex_class):
-            return (self.x <= other.x)or((self.x == other.x)and(self.y <= other.y))or((self.x == other.x)and(self.y == other.y)and(self.z <=other.z))
+        if isinstance(other, MchVertex_class):
+            return (self.x <= other.x) or ((self.x == other.x) and (self.y <= other.y)) or ((self.x == other.x) and (self.y == other.y) and (self.z <= other.z))
         return NotImplemented
+
     def __lt__(self, other):
-        if isinstance(other,MchVertex_class):
-            return (self.x < other.x)or((self.x == other.x)and(self.y < other.y))or((self.x == other.x)and(self.y == other.y)and(self.z <other.z))
+        if isinstance(other, MchVertex_class):
+            return (self.x < other.x) or ((self.x == other.x) and (self.y < other.y)) or ((self.x == other.x) and (self.y == other.y) and (self.z < other.z))
         return NotImplemented
+
     def __ge__(self, other):
-        if isinstance(other,MchVertex_class):
-            return (self.x >= other.x)or((self.x == other.x)and(self.y >= other.y))or((self.x == other.x)and(self.y == other.y)and(self.z >=other.z))
+        if isinstance(other, MchVertex_class):
+            return (self.x >= other.x) or ((self.x == other.x) and (self.y >= other.y)) or ((self.x == other.x) and (self.y == other.y) and (self.z >= other.z))
         return NotImplemented
+
     def __gt__(self, other):
-        if isinstance(other,MchVertex_class):
-            return (self.x >other.x)or((self.x == other.x)and(self.y > other.y))or((self.x == other.x)and(self.y == other.y)and(self.z >other.z))
+        if isinstance(other, MchVertex_class):
+            return (self.x > other.x) or ((self.x == other.x) and (self.y > other.y)) or ((self.x == other.x) and (self.y == other.y) and (self.z > other.z))
         return NotImplemented
+
+    def __hash__(self):
+        return hash((self.x, self.y, self.z))
 
 
 class MchUV_class:
-    """Class defining a MCH vertex(8bytes):
-        -x#1byte
-        -y#1byte"""
-    def __init__(self,u=0,v=0) :#constructor
-        self.u=u
-        self.v=v
-    #Comparison operators
-    def __eq__(self, other):#"=="
-        if isinstance(other,MchUV_class):
-            return (self.u== other.u)and(self.v==other.v)#compare all dictionary
+    """Class defining a MCH UV coordinate:
+        - u # 1 byte
+        - v # 1 byte"""
+    
+    def __init__(self, u=0, v=0):  # Constructor
+        self.u = u
+        self.v = v
+
+    # Comparison operators
+    def __eq__(self, other):  # "=="
+        if isinstance(other, MchUV_class):
+            return (self.u == other.u) and (self.v == other.v)  # Compare all attributes
         return NotImplemented
-    def __ne__(self, other):#"!="
+
+    def __ne__(self, other):  # "!="
         result = self.__eq__(other)
         if result is NotImplemented:
             return result
         return not result
+
     def __le__(self, other):
-        if isinstance(other,MchUV_class):
-            return (self.u <= other.u)or((self.u == other.u)and(self.v <= other.v))
+        if isinstance(other, MchUV_class):
+            return (self.u <= other.u) or ((self.u == other.u) and (self.v <= other.v))
         return NotImplemented
+
     def __lt__(self, other):
-        if isinstance(other,MchUV_class):
-            return (self.u < other.u)or((self.u == other.u)and(self.v < other.v))
+        if isinstance(other, MchUV_class):
+            return (self.u < other.u) or ((self.u == other.u) and (self.v < other.v))
         return NotImplemented
+
     def __ge__(self, other):
-        if isinstance(other,MchUV_class):
-            return (self.u >= other.u)or((self.u == other.u)and(self.v >= other.v))
+        if isinstance(other, MchUV_class):
+            return (self.u >= other.u) or ((self.u == other.u) and (self.v >= other.v))
         return NotImplemented
+
     def __gt__(self, other):
-        if isinstance(other,MchUV_class):
-            return (self.u > other.u)or((self.u == other.u)and(self.v > other.v))
+        if isinstance(other, MchUV_class):
+            return (self.u > other.u) or ((self.u == other.u) and (self.v > other.v))
+        return NotImplemented
+
+    def __hash__(self):
+        """Return a hash value based on u and v."""
+        return hash((self.u, self.v))
 
 class MchFace_class:
     """Class defining a MCH face(64bytes):
@@ -598,6 +622,7 @@ def ClearScene():
 
 def ReadBone(inputfile):
     header=ReadMCH(inputfile)
+    start = time.time()
     inputfile.seek(header.ModelAddress+header.BoneOffset,0)
     boneList=[MchBone_class() for i in range(header.BoneCount)]
     print("bone Count from header:{}".format(header.BoneCount))
@@ -623,7 +648,7 @@ def ReadBone(inputfile):
     for i in range(0,header.BoneCount):
         boneList[i].Chainlength=chainlength(i,boneList)
 
-
+    print("ReadBone Time Used: "+str(time.time() - start))
     return boneList
 
 
@@ -631,6 +656,8 @@ def RestPose(mchfile,boneList,char_name):
 
     BoneRotations=[]
     header=ReadMCH(mchfile)
+    
+    start = time.time()
     mchfile.seek(header.ModelAddress+header.AnimOffset+2,0)
     anim=MchAnim_class()
     #frame count
@@ -1019,6 +1046,7 @@ def RestPose(mchfile,boneList,char_name):
 
         BoneRotations.append(eul)
 
+    print("RestPose Time Used: "+str(time.time() - start))
     return BoneRotations
 
 def poseRig(armature,boneList,poseList,offset,frame_num):
@@ -1121,6 +1149,7 @@ def poseRig(armature,boneList,poseList,offset,frame_num):
 
 def CreateAction(armature,boneList,anim):
     """Create an action data block with MchAnim_class list called 'anim'"""
+    start=time.time()
     if (armature.type!='ARMATURE'):
         return "No armature selected"
     else:
@@ -1134,17 +1163,17 @@ def CreateAction(armature,boneList,anim):
         bpy.data.actions[tempName].name=anim.name
 
 
-
         for i in range(0,anim.frameCount):
             curFrame=anim.frameList[i]
             poseRig(armature,boneList,curFrame.poseList,curFrame.Offset,i)
 
         bpy.ops.object.mode_set(mode='OBJECT')
-
+ 
+    print("CreateAction Time Used: "+str(time.time() - start))
     return
 
 def Retarget(arm_to_copy,arm_retarget,anim):
-
+    start = time.time()
     bpy.data.actions.new('before')
     arm_retarget.keyframe_insert(data_path="rotation_euler" ,frame=0)
     arm_retarget.animation_data.action=bpy.data.actions["before"]
@@ -1203,10 +1232,10 @@ def Retarget(arm_to_copy,arm_retarget,anim):
 
     bpy.ops.object.mode_set(mode='OBJECT')
 
-
-
+    print("Retarget Used: "+str(time.time() - start))
     return
 def ReadAnim(boneList,onefile,char_name):
+    start = time.time()
     """Returns a list of animations. An animation is a list of frames. A frame is a pose list of a bone list."""
     print("Extracting anim of {} from chara.one".format(char_name))
     onefile.seek(0,0)
@@ -1319,9 +1348,11 @@ def ReadAnim(boneList,onefile,char_name):
     armature_rest.data.pose_position='REST'
     armature_rest.data.display_type='WIRE'
 
+    print("ReadAnim Time Used: "+str(time.time() - start))
     return
-
+'''
 def TIM_TO_BLEND(inputfile,name):
+    start = time.time()
     inputfile.seek(0,0)
     palette=CLUT_class()
     image=CLUT_class()
@@ -1432,9 +1463,122 @@ def TIM_TO_BLEND(inputfile,name):
 
         tex_image.use_fake_user= True
 
+    print("TIM_TO_BLEND Time Used: "+str(time.time() - start))
+    return texcount
+'''
+
+
+
+def TIM_TO_BLEND(inputfile, name):
+    start = time.time()
+
+    inputfile.seek(0, 0)
+    # Initialize the classes
+    palette = CLUT_class()
+    image = CLUT_class()
+    texcount = 0
+    texoffset = 0
+
+    # Count the textures
+    while texoffset != 0xFFFFFF:
+        texoffset = int.from_bytes(inputfile.read(3), byteorder=endian)
+        inputfile.seek(1, 1)  # Skip 1 byte
+        if texoffset != 0xFFFFFF:
+            texcount += 1
+
+    print("{} textures found in mch".format(texcount))
+
+    inputfile.seek(0, 0)
+    texoffset = 0
+
+    for i in range(texcount):
+        tex_image = bpy.data.images.new(f"{name}-{i}", 128, 128)  # Create a new texture
+        inputfile.seek(i * 4, 0)
+        texoffset = int.from_bytes(inputfile.read(3), byteorder=endian)
+        inputfile.seek(texoffset + 4, 0)  # Skip 0x10000000
+        colordepth = int.from_bytes(inputfile.read(4), byteorder=endian)
+
+        # ------- PALETTE IF 4-bit or 8-bit image ----------
+        if colordepth in (0x08, 0x09):
+            read_palette(inputfile, palette, i)
+
+            # Create and populate palette image
+            palette_image = bpy.data.images.new(f"palette{i}", 16, 16)
+            populate_palette_image(inputfile, palette, palette_image)
+
+        # ------- IMAGE ----------
+        read_image_info(inputfile, image)
+
+        # Determine pixel size based on color depth
+        pix_size = 2 if colordepth == 0x08 else 1 if colordepth == 0x09 else 0
+        palette_image = bpy.data.images[f"palette{i}"]
+
+        populate_texture_image(inputfile, image, tex_image, palette_image, pix_size)
+
+        tex_image.use_fake_user = True
+
+    print("TIM_TO_BLEND Time Used: " + str(time.time() - start))
     return texcount
 
+
+def read_palette(inputfile, palette, index):
+    palette.imagesize = int.from_bytes(inputfile.read(4), byteorder=endian)
+    palette.x = int.from_bytes(inputfile.read(2), byteorder=endian)
+    palette.y = int.from_bytes(inputfile.read(2), byteorder=endian)
+    palette.pixH = int.from_bytes(inputfile.read(2), byteorder=endian)
+    palette.pixV = int.from_bytes(inputfile.read(2), byteorder=endian)
+
+
+def populate_palette_image(inputfile, palette, palette_image):
+    for pix in range(palette.pixH * palette.pixV):
+        pix_image = int.from_bytes(inputfile.read(2), byteorder=endian)
+        A = (pix_image >> 15) & 0x01
+        B = ((pix_image >> 10) & 0x1F) / 32.0
+        G = ((pix_image >> 5) & 0x1F) / 32.0
+        R = (pix_image & 0x1F) / 32.0
+        
+        A = 1 if (R != 0 or G != 0 or B != 0) else A
+
+        # Assign to the palette image
+        palette_image.pixels[pix * 4: pix * 4 + 4] = [R, G, B, A]
+
+
+def read_image_info(inputfile, image):
+    image.imagesize = int.from_bytes(inputfile.read(4), byteorder=endian)
+    image.x = int.from_bytes(inputfile.read(2), byteorder=endian)
+    image.y = int.from_bytes(inputfile.read(2), byteorder=endian)
+    image.pixH = int.from_bytes(inputfile.read(2), byteorder=endian)
+    image.pixV = int.from_bytes(inputfile.read(2), byteorder=endian)
+
+
+def populate_texture_image(inputfile, image, tex_image, palette_image, pix_size):
+    total_pixels = image.pixH * image.pixV * pix_size * 2
+    for pix in range(total_pixels):
+        color = int.from_bytes(inputfile.read(pix_size), byteorder=endian)
+        R = palette_image.pixels[color * 4]
+        G = palette_image.pixels[color * 4 + 1]
+        B = palette_image.pixels[color * 4 + 2]
+        A = palette_image.pixels[color * 4 + 3]
+        
+        # Set alpha channel according to presence of color
+        A = 1 if (R != 0 or G != 0 or B != 0) else 0
+        
+        pix_column = pix % 128
+        pix_line = 127 - (pix // 128)
+        npix = pix_column + 128 * pix_line
+        
+        tex_image.pixels[npix * 4: npix * 4 + 4] = [R, G, B, A]
+
+
+
+
+
+
+
+
+
 def MCH_TO_BLEND(context, filepath=""):
+    start = time.time()
     # Get the directory from the filepath
     directory = os.path.dirname(filepath)  # You just need the directory part
     # Get the base filename
@@ -1496,7 +1640,7 @@ def MCH_TO_BLEND(context, filepath=""):
         Vlist[i].setXYZ(x/SCALE,y/SCALE,z/SCALE)
         ##print("X{} Y{} Z{}".format(Vlist[i].x,Vlist[i].y,Vlist[i].z))
 
-
+    measure_faceuvs=time.time()
     #Store faces and UVs
     inputfile.seek(header.ModelAddress+header.FOffset)
     Flist=[MchFace_class() for i in range(header.FCount)]
@@ -1536,11 +1680,13 @@ def MCH_TO_BLEND(context, filepath=""):
             UVList[4*i+j].u+=tgroup[0]*128
             UVList[4*i+j].v+=tgroup[1]*128
 
+    print("UVReading Time Used: "+str(time.time() - measure_faceuvs))
 
 
-
+    filter_uv_time=time.time()
     #associate uvs to faces
     ##remove redundant uvs
+    '''
     print("UV count before filter:",len(UVList))
     UVList_redundant=UVList.copy()
 
@@ -1549,8 +1695,6 @@ def MCH_TO_BLEND(context, filepath=""):
         if(UVList.count(uv)>1):
             UVList.remove(uv)
     print("UV count after filter:",len(UVList))
-
-
 
     ##associate uvs index
     for i in range(header.FCount):
@@ -1565,8 +1709,31 @@ def MCH_TO_BLEND(context, filepath=""):
                 fa.vt3=j
             if (uv==UVList_redundant[4*i+3]):
                 fa.vt4=j
-    #Draw the raw model in blender
 
+    '''
+    # Store the original UV list
+    UVList_redundant = UVList.copy()
+	print("UV count before filter:", len(UVList_redundant))
+    # Use a set to filter out duplicates but also keep track of original indices
+    unique_UV_set = set(UVList)
+    UVList = list(unique_UV_set)
+
+
+    print("UV count after filter:", len(UVList))
+
+    # Create a mapping of UV to their index for the unique UVs
+    uv_index_map = {uv: index for index, uv in enumerate(UVList)}
+
+    # Associate UV indices with faces
+    for i in range(header.FCount):
+        fa = Flist[i]
+        for k in range(4):  # Assuming there are always 4 UVs for each face
+            uv = UVList_redundant[4 * i + k]
+            if uv in uv_index_map:
+                setattr(fa, f'vt{k + 1}', uv_index_map[uv])
+    
+    print("Filtering UVs Time Used: "+str(time.time() - filter_uv_time))
+    #Draw the raw model in blender
     createMeshFromData("{}".format(header.char_name),Vlist,Flist,UVList)
 
 
@@ -1804,31 +1971,10 @@ def MCH_TO_BLEND(context, filepath=""):
                     space.shading.type = 'MATERIAL'
 
 
+    print("MCH_TO_BLEND Time Used: "+str(time.time() - start))
     return
 
 def BLEND_TO_MCH(context,directory=""):
-    #----OLD CODE ---05/10/2024-----
-    #--------------------------------
-    #cur_dir=bpy.path.abspath("//")
-    #indir_name=''.join([cur_dir,"INPUT\\"])
-    #outdir_name=''.join([cur_dir,"OUTPUT\\"])
-    #mch_found=0
-    #one_found=0
-    #char_name='none'
-
-    #filelist=[entity for entity in os.listdir(indir_name)]#create list
-    #for entity in filelist:
-        #(filename, extension) = os.path.splitext(entity)
-        #if extension==".mch":
-           # mch_found=1
-            #char_name=filename[0:4]
-            #print("Character {} open".format(char_name))
-            #break
-
-    #inputpath=''.join([indir_name,entity])
-    #outputpath=''.join([outdir_name,char_name,'-new.mch'])
-    #print("{}\n".format(outputpath))
-
     mch_found=0
     char_name='none'
 
